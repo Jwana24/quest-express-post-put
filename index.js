@@ -1,12 +1,12 @@
 // dotenv loads parameters (port and database config) from .env
 require('dotenv').config();
 const express = require('express');
-const bodyParser = require('body-parser');
 const connection = require('./db');
-
 const app = express();
+
+const bodyParser = require('body-parser');
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.urlencoded({ extended: true }));
 
 // respond to requests on `/api/users`
 app.get('/api/users', (req, res) => {
@@ -23,6 +23,22 @@ app.get('/api/users', (req, res) => {
       res.json(results);
     }
   });
+});
+
+app.post('/api/users', (req, res) => {
+  const dataUser = req.body;
+  connection.query('INSERT INTO user SET ?', dataUser, (err, results) => {
+    if(err){
+      console.log(err)
+      res.status(500).json({
+        error: err.message,
+        sql: err.sql,
+      });
+    }
+    else{
+      res.json(results);
+    }
+  })
 });
 
 app.listen(process.env.PORT, (err) => {
