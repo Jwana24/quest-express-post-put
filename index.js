@@ -27,6 +27,29 @@ app.get('/api/users', (req, res) => {
 
 app.post('/api/users', (req, res) => {
   const dataUser = req.body;
+
+  const { email, password, name } = req.body;
+  if(!email || !password || !name){
+    return res.status(422).json({
+      error: 'Missing at least one of the required fields is missing'
+    });
+  }
+
+  const emailRegex = /[a-z0-9._-]+@[a-z0-9-]+\.[a-z]{2,6}/;
+  // si l'email ne passe pas le test de la regex, l'erreur est affichée
+  if(!emailRegex.test(email)){
+    return  res.status(422).json({
+      error: 'Invalid email',
+    })
+  }
+
+  const passwordRegex = /^((?=.*[@#!$&+%/*])(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z]).{8,})$/;
+  if(!passwordRegex.test(password)){
+    return res.status(422).json({
+      error: 'Password too short (8 characters min.) !',
+    })
+  }
+
   connection.query('INSERT INTO user SET ?', dataUser, (err, results) => {
     if(err){
       console.log(err)
