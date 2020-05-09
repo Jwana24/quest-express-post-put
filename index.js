@@ -47,9 +47,12 @@ app.put('/api/users/:id', userValidationMiddlewares, (req, res) => {
 
   connection.query('UPDATE user SET ? WHERE id = ?', [dataUser, idUser], (err, results) => {
     if(err){
-      // if(){
-      //   // erreur liée au mail duppliqué
-      // }
+      if(err.code === "ER_DUP_ENTRY"){
+        res.status(409).json({
+          error: 'Email already exists'
+        });
+      }
+      console.log(err);
       res.status(500).json({
         error: err.message,
         sql: err.sql,
