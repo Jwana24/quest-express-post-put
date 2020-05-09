@@ -8,6 +8,8 @@ const bodyParser = require('body-parser');
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+const { check, validationResult } = require('express-validator');
+
 // respond to requests on `/api/users`
 app.get('/api/users', (req, res) => {
   // send an SQL query to get all users
@@ -25,20 +27,55 @@ app.get('/api/users', (req, res) => {
   });
 });
 
-app.post('/api/users', (req, res) => {
+const userValidationMiddlewares = [
+  // email must be valid
+  check('email').isEmail(),
+  // password must be at least 8 chars long
+  check('password').isLength({ min: 8 }),
+  // let's assume a name should be 2 chars long
+  check('name').isLength({ min: 2 }),
+];
+
+app.put('/api/users/:id', userValidationMiddlewares, (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(422).json({ errors: errors.array() });
+  };
+
   const dataUser = req.body;
-  connection.query('INSERT INTO user SET ?', dataUser, (err, results) => {
+  const idUser = req.params.id;
+
+  connection.query('UPDATE user SET ? WHERE id = ?', [dataUser, idUser], (err, results) => {
     if(err){
-      console.log(err)
+      if(err.code === "ER_DUP_ENTRY"){
+        res.status(409).json({
+          error: 'Email already exists'
+        });
+      }
+      console.log(err);
       res.status(500).json({
         error: err.message,
         sql: err.sql,
       });
     }
     else{
-      res.json(results);
+      connection.query('SELECT * FROM user WHERE id = ?', [idUser], (err2, records) => {
+        if(err2){
+          return res.status(500).json({
+            error: err2.message,
+            sql: err2.sql,
+          });
+        }
+        else{
+          const updatedUser = records[0];
+          const { password, ...user } = updatedUser;
+          const host = req.get('host');
+          const location = `http://${host}${req.url}/${user.id}`;
+          res.status(201).set('Location', location).json(user);
+        }
+      });
     }
-  })
+  });
 });
 
 app.listen(process.env.PORT, (err) => {
