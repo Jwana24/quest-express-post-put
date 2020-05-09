@@ -68,33 +68,133 @@ app.get('/api/users', (req, res) => {
 // });
 
 // make validations on the inputs
-const { check, validationResult } = require('express-validator');
+// const { check, validationResult } = require('express-validator');
 
-// ajout d'un user avec vérifications des champs par le module "express-validator"
-// ce module utilise le système de "middlewares" en rajoutant des propriétés à "req"
-app.post('/api/users', [
-  check('email').isEmail(),
-  check('password').isLength({ min: 8 }),
-  check('name').isLength({ min: 4 })
-], (req, res) => {
+// // ajout d'un user avec vérifications des champs par le module "express-validator"
+// // ce module utilise le système de "middlewares" en rajoutant des propriétés à "req"
+// app.post('/api/users', [
+//   check('email').isEmail(),
+//   check('password').isLength({ min: 8 }),
+//   check('name').isLength({ min: 4 })
+// ], (req, res) => {
 
-  // Finds the validation errors in this request and wraps them in an object with handy functions
-  const errors = validationResult(req);
-  if(!errors.isEmpty()){
-    return res.status(422).json({ errors: errors.array() });
-  }
+//   // Finds the validation errors in this request and wraps them in an object with handy functions
+//   const errors = validationResult(req);
+//   if(!errors.isEmpty()){
+//     return res.status(422).json({ errors: errors.array() });
+//   }
   
+//   const dataUser = req.body;
+//   connection.query('INSERT INTO user SET ?', dataUser, (err, results) => {
+//     if(err){
+        // if(err.code === 'ER_DUP-ENTRY'){
+        //   res.status(409).json({
+        //     error: 'Email already exists'
+        //   });
+        // }
+//
+//       console.log(err)
+//       res.status(500).json({
+//         error: err.message,
+//         sql: err.sql,
+//       });
+//     }
+//     else{
+//       // if everything ok we want to return a custom response to the user
+//       connection.query('SELECT * FROM user WHERE id = ?', results.insertId, (err2, records) => {
+//         if(err2){
+//           res.status(500).json({
+//             error: err2.message,
+//             sql: err2.sql,
+//           });
+//         }
+//         else{
+//           // we enter in the first item of the array
+//           const insertUser = records[0];
+//           // we destructure the entire user, exept the password, as a new object
+//           const { password, ...user } = insertUser;
+//           // we get the 'host' and the 'port'
+//           const host = req.get('host');
+//           // we create the full location (ex: http://localhost:3000/api/users/:id)
+//           const location = `http://${host}${req.url}/${user.id}`;
+//           res.status(201).set('Location', location).json(user);
+//         }
+//       });
+//     }
+//   });
+// });
+
+app.put('/api/users/:id', (req, res) => {
+  // VALIDATION PART //
+  const { email, password, name } = req.body;
+  const emailRegex = /[a-z0-9._-]+@[a-z0-9-]+\.[a-z]{2,6}/;
+  // au moins un chiffre, au moins une lettre majuscule et minuscule, au moins un caractère spécial
+  // 8 caractères minimum
+  const passwordRegex = /^((?=.*[@#!$&+%/*])(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z]).{8,})$/;
+  
+  // si il manque un seul de ces éléments, l'erreur est affichée
+  if(!email || !password || !name){
+    return res.status(422).json({
+      error: 'Missing at least one of the required fields is missing'
+    });
+  };
+  
+  // si l'email ne passe pas le test de la regex, l'erreur est affichée
+  if(!emailRegex.test(email)){
+    return  res.status(422).json({
+      error: 'Invalid email',
+    })
+  };
+  
+  // si le mot de passe ne passe pas le test de la regex, l'erreur est affichée
+  if(!passwordRegex.test(password)){
+    return res.status(422).json({
+      error: 'Password too short (8 characters min.) !',
+    })
+  };
+  
+  // UPDATE USER PART //
+  const idUser = req.params.id;
   const dataUser = req.body;
-  connection.query('INSERT INTO user SET ?', dataUser, (err, results) => {
+
+  connection.query('UPDATE user SET ? WHERE id = ?', [dataUser, idUser], (err, results) => {
     if(err){
-      console.log(err)
+      // si l'utilisateur rentre un email déjà existant en base de données, sql le sait et retourne
+      // l'erreur de dupplication de l'entrée, si cette erreur est présente, on retourne une erreur
+      // à l'utilisateur en lui spécifiant que cet email existe déjà
+      if(err.code === 'ER_DUP-ENTRY'){
+        res.status(409).json({
+          error: 'Email already exists'
+        });
+      }
+
+      console.log(err);
       res.status(500).json({
         error: err.message,
         sql: err.sql,
       });
     }
     else{
-      res.json(results);
+      // if everything ok we want to return a custom response to the user
+      connection.query('SELECT * FROM user WHERE id = ?', [idUser], (err2, records) => {
+        if(err2){
+          res.status(500).json({
+            error: err2.message,
+            sql: err2.sql,
+          });
+        }
+        else{
+          // we enter in the first item of the array
+          const updateUser = records[0];
+          // we destructure the entire user, exept the password, as a new object
+          const { password, ...user } = updateUser;
+          // we get the 'host' and the 'port'
+          const host = req.get('host');
+          // we create the full location (ex: http://localhost:3000/api/users/:id)
+          const location = `http://${host}${req.url}/${user.id}`;
+          res.status(201).set('Location', location).json(user);
+        }
+      });
     }
   })
 })
