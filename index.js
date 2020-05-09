@@ -127,30 +127,25 @@ app.get('/api/users', (req, res) => {
 app.put('/api/users/:id', (req, res) => {
   // VALIDATION PART //
   const { email, password, name } = req.body;
-  const emailRegex = /[a-z0-9._-]+@[a-z0-9-]+\.[a-z]{2,6}/;
-  // au moins un chiffre, au moins une lettre majuscule et minuscule, au moins un caractère spécial
-  // 8 caractères minimum
-  const passwordRegex = /^((?=.*[@#!$&+%/*])(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z]).{8,})$/;
-  
-  // si il manque un seul de ces éléments, l'erreur est affichée
   if(!email || !password || !name){
     return res.status(422).json({
       error: 'Missing at least one of the required fields is missing'
     });
   };
-  
+
+  const emailRegex = /[a-z0-9._-]+@[a-z0-9-]+\.[a-z]{2,6}/;
   // si l'email ne passe pas le test de la regex, l'erreur est affichée
   if(!emailRegex.test(email)){
     return  res.status(422).json({
       error: 'Invalid email',
-    })
+    });
   };
-  
-  // si le mot de passe ne passe pas le test de la regex, l'erreur est affichée
+
+  const passwordRegex = /^((?=.*[@#!$&+%/*])(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z]).{8,})$/;
   if(!passwordRegex.test(password)){
     return res.status(422).json({
       error: 'Password too short (8 characters min.) !',
-    })
+    });
   };
   
   // UPDATE USER PART //
