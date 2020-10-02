@@ -71,7 +71,7 @@ app.put('/api/users/:id', userValidationMiddlewares, (req, res) => {
           const { password, ...user } = updatedUser;
           const host = req.get('host');
           const location = `http://${host}${req.url}/${user.id}`;
-          res.status(201).set('Location', location).json(user);
+          res.status(200).set('Location', location).json(user);
         }
       });
     }
